@@ -10,7 +10,7 @@ def add_params(subparsers):
 
     list_parser.add_argument(
         '--type',
-        required=True,
+        default='VirtualMachine',
         help='Object type, e.g. Network, VirtualMachine.'
     )
 

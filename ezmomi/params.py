@@ -14,6 +14,20 @@ def add_params(subparsers):
         help='Object type, e.g. Network, VirtualMachine.'
     )
 
+    list_parser.add_argument(
+        '--regexp',
+        nargs="+",
+        default=[],
+        help='Filter list by pattern(s)'
+    )
+
+    list_parser.add_argument(
+        '--name',
+        nargs="+",
+        default=[],
+        help='Filter list by name(s)'
+    )
+
     list_snapshot_parser = subparsers.add_parser(
         'listSnapshots',
         help='List snapshots for a VM'

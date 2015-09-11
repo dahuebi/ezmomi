@@ -9,6 +9,7 @@ from pprint import pprint, pformat
 import time
 from netaddr import IPNetwork, IPAddress
 import yaml
+import re
 
 
 class EZMomi(object):
@@ -108,12 +109,25 @@ class EZMomi(object):
         self.content = self.si.RetrieveContent()
 
     '''
+    Match a string against a list of regexp patterns.
+    Patterns will be enclosed in ^...$.
+    '''
+    def _match_patterns(self, patterns, string):
+        regexps = [re.compile(pattern, re.I) for pattern in patterns]
+        matches = [regexp.search('^%s$' % string) for regexp in regexps]
+        if any(matches):
+            return True
+        return False
+
+    '''
      Command Section: list
      List available VMware objects
     '''
     def list_objects(self):
         vimtype = self.config['type']
         vim_obj = "vim.%s" % vimtype
+        regexps = self.config['regexp']
+        names = self.config['name']
 
         try:
             container = self.content.viewManager.CreateContainerView(
@@ -128,6 +142,11 @@ class EZMomi(object):
 
         rows = [['MOID', 'Name', 'Status']] if vimtype == "VirtualMachine" else [['MOID', 'Name']]
         for c in container.view:
+            if regexps or names:
+                # check if vm is in regexps/names
+                if (not self._match_patterns(regexps, c.name) and
+                        c.name not in names):
+                    continue
             if vimtype == "VirtualMachine":
                 rows.append([c._moId, c.name, c.runtime.powerState])
             else:

@@ -359,10 +359,43 @@ class EZMomi(object):
             print "Destroying %s..." % self.config['name']
             result = self.WaitForTasks(tasks)
 
+    '''
+    Get the network interfaces of a virtual machine.
+    '''
+    def _get_network_interfaces(self, vm):
+        NIC = vim.vm.device.VirtualEthernetCard
+        nics = [x for x in vm.config.hardware.device if isinstance(x, NIC)]
+        return nics
+
+    '''
+    Get the mac addresses of a virtual machine.
+    '''
+    def _get_macs(self, vm):
+        nics = self._get_nics(vm)
+        macs = map(lambda x: x.macAddress, nics)
+        return macs
+
     ''' Check power status '''
     def status(self):
         vm = self.get_vm_failfast(self.config['name'])
-        self.tabulate([[vm.name, vm.runtime.powerState]])
+        rows = []
+        rows.append(['Name', vm.name])
+        rows.append(['PowerState', vm.runtime.powerState])
+
+        summary = vm.summary
+        config = summary.config
+        guest = summary.guest
+
+        rows.append(['Cpus', '%s' % config.numCpu])
+        rows.append(['Mem', '%s' % config.memorySizeMB])
+        rows.append(['IP', '%s' % guest.ipAddress])
+
+        nics = self._get_network_interfaces(vm)
+        for nic in nics:
+            network = nic.backing.deviceName
+            rows.append(['Mac / Network', '%s / %s' % (nic.macAddress, network)])
+
+        self.tabulate(rows)
 
     ''' shutdown guest, with fallback to power off if guest tools aren't installed '''
     def shutdown(self):

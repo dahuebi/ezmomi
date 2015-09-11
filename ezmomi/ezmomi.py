@@ -12,6 +12,8 @@ import yaml
 import re
 
 
+from disk_layout import DiskLayout
+
 class EZMomi(object):
     def __init__(self, **kwargs):
         # load up our configs and connect to the vSphere server
@@ -379,7 +381,8 @@ class EZMomi(object):
     def status(self):
         vm = self.get_vm_failfast(self.config['name'])
         rows = []
-        rows.append(['Name', vm.name])
+        vm_name = vm.name
+        rows.append(['Name', vm_name])
         rows.append(['PowerState', vm.runtime.powerState])
 
         summary = vm.summary
@@ -394,6 +397,47 @@ class EZMomi(object):
         for nic in nics:
             network = nic.backing.deviceName
             rows.append(['Mac / Network', '%s / %s' % (nic.macAddress, network)])
+
+        layout = DiskLayout(vm)
+        for (ctrl_nr, slot_nr, disk) in layout:
+            info = disk.deviceInfo
+            desc = '%s-%s: %s' % (ctrl_nr, slot_nr, info.label)
+            rows.append(['Disk', desc])
+            backing = disk.backing
+            parent = backing
+            linked_to = []
+            # walk through disk backing
+            while parent:
+                fileName = parent.fileName
+                rows.append(['', 'UUID=%s %s' % (parent.uuid, fileName)])
+                linked_vm = [re.sub("^[^\s]+\s+([^/]+)/.*$", "\g<1>", fileName)]
+                linked_to += linked_vm
+                parent = parent.parent
+        # uniquely sort linked_to
+        linked_to = sorted(set(linked_to))
+        # try to remove this vm from linked_to
+        try:
+            linked_to.remove(vm_name.lower())
+        except ValueError:
+            pass
+        if linked_to:
+            desc = ', '.join(map(unicode, linked_to))
+            rows.append(['Linked to', desc])
+
+        try:
+            snapshots = vm.snapshot
+        except IndexError:
+            # raised if no snapshot is found
+            snapshots = []
+        if snapshots:
+            rows.append(['Snapshots', ''])
+            def list_snapshots(snap_list, indent=0):
+                for snap in snap_list:
+                    desc = 2 * indent * " " + "%s" % (snap.name)
+                    rows.append(['', desc])
+                    if snap.childSnapshotList:
+                        list_snapshots(snap.childSnapshotList, indent + 1)
+            list_snapshots(snapshots.rootSnapshotList)
 
         self.tabulate(rows)
 

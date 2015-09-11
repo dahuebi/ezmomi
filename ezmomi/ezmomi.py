@@ -391,7 +391,7 @@ class EZMomi(object):
 
         for row in data:
             for column in range(0, len(row)):
-                column_len = len(row[column])
+                column_len = len("%s" % row[column])
                 try:
                     column_widths[column] = max(column_len,
                                                 column_widths[column])
@@ -401,9 +401,9 @@ class EZMomi(object):
         for column in range(0, len(column_widths)):
             column_widths[column] += self._column_spacing - 1
 
-        format = "{0:<%d}" % column_widths[0]
+        format = u"{0:<%d}" % column_widths[0]
         for width in range(1, len(column_widths)):
-            format += " {%d:<%d}" % (width, column_widths[width])
+            format += u" {%d:<%d}" % (width, column_widths[width])
 
         for row in data:
             print format.format(*row)
@@ -526,6 +526,7 @@ class EZMomi(object):
     Get the vsphere object associated with a given text name
     '''
     def get_obj(self, vimtype, name, return_all=False):
+        name = unicode(name, 'utf-8')
         obj = list() 
         container = self.content.viewManager.CreateContainerView(
             self.content.rootFolder, vimtype, True)

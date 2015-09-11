@@ -140,7 +140,9 @@ class EZMomi(object):
         # print header line
         print "%s list" % vimtype
 
-        rows = [['MOID', 'Name', 'Status']] if vimtype == "VirtualMachine" else [['MOID', 'Name']]
+        rows = [['MOID', 'Name']]
+        if vimtype == "VirtualMachine":
+            rows = [['MOID', 'Name', 'Status', 'Cpus', 'Memory', 'IP']]
         for c in container.view:
             if regexps or names:
                 # check if vm is in regexps/names
@@ -148,7 +150,11 @@ class EZMomi(object):
                         c.name not in names):
                     continue
             if vimtype == "VirtualMachine":
-                rows.append([c._moId, c.name, c.runtime.powerState])
+                summary = c.summary
+                config = summary.config
+                guest = summary.guest
+                rows.append([c._moId, c.name, c.runtime.powerState,
+                        "%s" % config.numCpu, "%s" % config.memorySizeMB, guest.ipAddress])
             else:
                 rows.append([c._moId, c.name])
 
